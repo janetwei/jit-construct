@@ -26,7 +26,7 @@ for filename, expected_hash in expected_output_hashes.iteritems():
     actual_hash = hashlib.sha1(output).hexdigest()
     print filename.ljust(24),
     if actual_hash == expected_hash:
-        print 'GOOD\t%.1fms' % (elapsed * 1000)
+        print 'GOOD\t%.1f\tms' % (elapsed * 1000)
     else:
         print "bad output: expected %s got %s" % (
             expected_hash, actual_hash)

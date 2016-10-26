@@ -80,7 +80,7 @@ bench-jit-x64: jit-x64
 	@echo Executing Brainf*ck benchmark suite. Be patient.
 	@echo
 	@env PATH='.:${PATH}' BF_RUN='$<' tests/bench.py
-
+	
 test: test_stack jit0-x64 jit0-arm
 	./test_stack
 	(./jit0-x64 42 ; echo $$?)
@@ -89,6 +89,9 @@ test: test_stack jit0-x64 jit0-arm
 test_stack: tests/test_stack.c
 	$(CC) $(CFLAGS) -o $@ $^
 
+
+plot:result_time.csv
+	gnuplot runtime.gp
 clean:
 	$(RM) $(BIN) \
 	      hello-x86 hello-x64 hello-arm hello.s \

@@ -13,6 +13,18 @@
 #define Dst &state
 #define MAX_NESTING 256
 
+int continuous_count(char *p)
+{
+    char *ptr = p;
+    int count = 0;
+    while (*ptr == *p) {
+        count++;
+        ptr++;
+    }
+    return count;
+}
+
+
 int main(int argc, char *argv[])
 {
 	if (argc < 2) err("Usage: jit-x86 <inputfile>");
@@ -31,19 +43,30 @@ int main(int argc, char *argv[])
 	|  mov  eax, [ebp + 8]
 	|  mov  PTR, eax
 
+        int count_add,count_sub,count_inc,count_dec;
+
 	for (char *p = read_file(argv[1]); *p; p++) {
 		switch (*p) {
 		case '>':
-			|  inc  PTR
+                        count_inc=continuous_count(p);
+			|  add  PTR,count_inc
+                        p+=(count_inc-1);
 			break;
 		case '<':
-			|  dec  PTR
+                        count_dec=continuous_count(p);
+			|  sub  PTR,count_dec
+                        p+=(count_dec-1);
 			break;
 		case '+':
-			|  inc  byte [PTR]
-			break;
+                        count_add=continuous_count(p);
+			|  add  byte [PTR],count_add
+                        p+=(count_add-1);
+                        break;
+			
 		case '-':
-			|  dec  byte [PTR]
+                        count_sub=continuous_count(p);
+			|  sub  byte [PTR],count_sub
+                        p+=(count_sub-1);
 			break;
 		case '.':
 			|  movzx eax, byte [PTR]
