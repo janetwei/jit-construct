@@ -24,6 +24,32 @@ int continuous_count(char *p)
     return count;
 }
 
+int scan_loop(char *p, char *brainfuck_ptr, int brainfuck_size)
+{
+    char *ptr = p;
+    while (*ptr != ']') {
+	ptr++;
+	if (*ptr != '>' || *ptr != '<') {
+	    if (*ptr != '\n')
+		break;  // or call other function
+            ptr = ptr++;
+	}
+    }
+    p = ptr;
+    /* scan right */
+    if (count_rightShift != 0) {
+	count_rightShift = (memchr(brainfuck_ptr, 0, brainfuck_size) - brainfuck_ptr) / sizeof(char);
+	|  add  PTR,count_rightShift
+	brainfuck_ptr += count_rightShift;
+	return 0;
+    }
+    /* scan left */
+    count_leftShift = (brainfuck_ptr - memrchr(brainfuck_ptr, 0, brainfuck_size)) / sizeof(char);
+    |  sub  PTR,count_leftShift
+    brainfuck_ptr -= count_leftShift;
+    return 0;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -45,28 +71,36 @@ int main(int argc, char *argv[])
 
         int count_add,count_sub,count_inc,count_dec;
 
+	char *brainfuck_ptr = (char *) malloc(sizeof(char));   //////////////////////////
+	int brainfuck_size = 1;
+
 	for (char *p = read_file(argv[1]); *p; p++) {
 		switch (*p) {
 		case '>':
                         count_inc=continuous_count(p);
 			|  add  PTR,count_inc
                         p+=(count_inc-1);
+			brainfuck_ptr += count_inc;
+			brainfuck_size += count_inc;
 			break;
 		case '<':
                         count_dec=continuous_count(p);
 			|  sub  PTR,count_dec
                         p+=(count_dec-1);
+			brainfuck_ptr -= count_inc-1;
 			break;
 		case '+':
                         count_add=continuous_count(p);
 			|  add  byte [PTR],count_add
                         p+=(count_add-1);
+			*brainfuck_ptr += count_add;
                         break;
 			
 		case '-':
                         count_sub=continuous_count(p);
 			|  sub  byte [PTR],count_sub
                         p+=(count_sub-1);
+			*brainfuck_ptr -= count_sub;
 			break;
 		case '.':
 			|  movzx eax, byte [PTR]
