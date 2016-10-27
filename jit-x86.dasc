@@ -50,27 +50,29 @@ int check_loops(char *p,int *index,int *mult)
 int scan_loop(char *p, char *brainfuck_ptr, int brainfuck_size)
 {
     char *ptr = p;
+    int right = 0, count_scan = 0;
+    ptr++;
+    if (*ptr == '>')
+	right++;
     while (*ptr != ']') {
-	ptr++;
 	if (*ptr != '>' || *ptr != '<') {
 	    if (*ptr != '\n')
-		break;  // or call other function
-            ptr = ptr++;
+		return 0;
+	    ptr++;
 	}
+	ptr++;
     }
-    p = ptr;
+    p = ptr;   // at ']'
     /* scan right */
-    if (count_rightShift != 0) {
-	count_rightShift = (memchr(brainfuck_ptr, 0, brainfuck_size) - brainfuck_ptr) / sizeof(char);
-	|  add  PTR,count_rightShift
-	brainfuck_ptr += count_rightShift;
-	return 0;
+    if ( right != 0) {
+	count_scan = (memchr(brainfuck_ptr, 0, brainfuck_size) - brainfuck_ptr);
+	brainfuck_ptr += count_scan;
+	return count_scan;
     }
     /* scan left */
-    count_leftShift = (brainfuck_ptr - memrchr(brainfuck_ptr, 0, brainfuck_size)) / sizeof(char);
-    |  sub  PTR,count_leftShift
-    brainfuck_ptr -= count_leftShift;
-    return 0;
+    count_scan = (memrchr(brainfuck_ptr, 0, brainfuck_size) - brainfuck_ptr);
+    brainfuck_ptr += count_scan;
+    return count_scan;
 }
 
 
@@ -93,7 +95,7 @@ int main(int argc, char *argv[])
 	|  mov  eax, [ebp + 8]
 	|  mov  PTR, eax
 
-        int count_add,count_sub,count_inc,count_dec,_index;
+        int count_add, count_sub, count_inc, count_dec, count_scan, _index;
 
 	char *brainfuck_ptr = (char *) malloc(sizeof(char));  
 	int brainfuck_size = 1;
@@ -111,7 +113,7 @@ int main(int argc, char *argv[])
                         count_dec=continuous_count( p );
 			|  sub  PTR,count_dec
                         p+=(count_dec-1);
-			brainfuck_ptr -= count_inc-1;
+			brainfuck_ptr -= count_dec;
 			break;
 		case '+':
                         count_add=continuous_count( p );
@@ -137,6 +139,18 @@ int main(int argc, char *argv[])
 			break;
 		case '[':
 			if (top == limit) err("Nesting too deep.");
+
+			count_scan = scan_loop(p, brainfuck_ptr, brainfuck_size);
+			if (count_scan > 0) {
+			    |  add  PTR,count_scan
+			    break;
+			}
+			else if (count_scan < 0) {
+			    count_scan = 0-count_scan;
+			    |  sub  PTR,count_scan
+			    break;
+			}
+
 			count=check_loop (p , index , mult);
 			if (count == 0)
 			{
