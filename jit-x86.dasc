@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "util.h"
 
+
 |.arch x86
 |.actionlist actions
 |
@@ -24,29 +25,40 @@ int continuous_count(char *p)
     return count;
 }
 
+int result = 0;
 int check_loops(char *p,int *index,int *mult)
 {
     int res,offset = 0,_index = 0;
+    result = 0;
     if (*(p+1) != '-') return -1;
     p += 2;
     while (*p != ']') {
         if (*p == '[' || *p == '-' ||
             *p == '.' || *p == ',')
-            return -1;
+            return -2;
         res = continuous_count(p);
         if (*p == '>') offset += res;
         else if (*p == '<') offset -= res;
         else if (*p == '+') {
+	    for(int i = 0;i < _index;i++)
+	    {
+		if(index[i] == offset)
+		{
+		    mult[i] += res;
+                    goto L1;
+		}
+	    }
             index[_index] = offset;
             mult[_index] = res;
             _index++;
         }
-        p += res;
+L1:     p += res;
    }
    if (offset != 0) return -1;
+       result += *p;
    return _index;
 }
-
+/*
 int scan_loop(char *p, char *brainfuck_ptr, int brainfuck_size)
 {
     char *ptr = p;
@@ -59,20 +71,20 @@ int scan_loop(char *p, char *brainfuck_ptr, int brainfuck_size)
 	}
     }
     p = ptr;
-    /* scan right */
+    
     if (count_rightShift != 0) {
 	count_rightShift = (memchr(brainfuck_ptr, 0, brainfuck_size) - brainfuck_ptr) / sizeof(char);
 	|  add  PTR,count_rightShift
 	brainfuck_ptr += count_rightShift;
 	return 0;
     }
-    /* scan left */
+    
     count_leftShift = (brainfuck_ptr - memrchr(brainfuck_ptr, 0, brainfuck_size)) / sizeof(char);
     |  sub  PTR,count_leftShift
     brainfuck_ptr -= count_leftShift;
     return 0;
 }
-
+*/
 
 
 int main(int argc, char *argv[])
@@ -93,7 +105,8 @@ int main(int argc, char *argv[])
 	|  mov  eax, [ebp + 8]
 	|  mov  PTR, eax
 
-        int count_add,count_sub,count_inc,count_dec,_index;
+        int count_add,count_sub,count_inc,count_dec,count;
+	int index[100000],mult[100000];
 
 	char *brainfuck_ptr = (char *) malloc(sizeof(char));  
 	int brainfuck_size = 1;
@@ -137,7 +150,8 @@ int main(int argc, char *argv[])
 			break;
 		case '[':
 			if (top == limit) err("Nesting too deep.");
-			count=check_loop (p , index , mult);
+			count = check_loops(p , index , mult);
+                        
 			if (count == 0)
 			{
 			    p+=2;
@@ -146,7 +160,7 @@ int main(int argc, char *argv[])
 			}
 			else if(count > 0)
 			{
-			    for(int i = 0;i < count; i++)
+       			    for(int i = 1; i < count; i++)
 			    {
 				if(mult[i] ==1)
 				{
@@ -155,10 +169,37 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
+				    int multi_result=(*brainfuck_ptr)*mult[i];
 				    | add PTR,index[i]
-				    | imul byte [PTR],*brainfuck_ptr,mult[i]
+				    | add byte [PTR],multi_result
 				}
-				
+    			    }
+     			    *brainfuck_ptr += result;
+			}
+			else if(count == -2)
+			{
+			    for(int j = *p-2;j < *p ; j++)
+			    {
+				switch(*p)
+                                {
+				    case '[':
+					if (top == limit) err("Nesting too deep.");
+					maxpc += 2;
+                            		*top++ = maxpc;
+                            		dasm_growpc(&state, maxpc);
+                            		|  cmp  byte [PTR], 0
+                            		|  je   =>(maxpc-2)
+                            		|=>(maxpc-1):
+                            		break;
+				    case ']':
+		                        if (top == pcstack) err("Unmatched ']'");
+                		        top--;
+		                        |  cmp  byte [PTR], 0
+                		        |  jne  =>(*top-1)
+		                        |=>(*top-2):
+                		        break;
+
+                                }
 			    }
 			}
 			// Each loop gets two pclabels: at the beginning and end.
